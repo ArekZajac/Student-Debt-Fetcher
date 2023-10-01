@@ -13,15 +13,17 @@ class DebtFetcher:
             options.add_argument("--headless=new")
         return webdriver.Chrome(options=options)
     
-    def get_debt(self):
+    def get_debt_info(self):
         driver = self.init_driver()
         url = "https://www.manage-student-loan-balance.service.gov.uk/ors/account-overview/secured/summary?locale=en"
         driver.get(url)
         self.accept_cookies(driver)
         self.login(driver)
-        debt = self.extract_debt(driver)
+        debt = float(self.extract_debt(driver)[1:].replace(",",""))
+        rate = float(self.extact_rate(driver)[:-1])
+        asof = self.extract_asof(driver).replace("as of ","")
         driver.quit()
-        return debt
+        return debt, rate, asof
     
     def accept_cookies(self, driver):
         try:
@@ -37,8 +39,17 @@ class DebtFetcher:
         driver.find_element(By.XPATH, '//*[@id="action-primary-0"]').click()
     
     def extract_debt(self, driver):
-        return driver.find_element(By.XPATH, '//*[@id="balanceId_1"]').text
+        return driver.find_element(By.XPATH, '//*[@id="balanceId_1"]').text.strip()
+    
+    def extact_rate(self, driver):
+        return driver.find_element(By.XPATH, '//*[@id="interestAsOfDateId-1"]').text
+    
+    def extract_asof(self, driver):
+        return driver.find_element(By.XPATH, '//*[@id="asOfBalanceDateId-1"]').text 
+
 
 if __name__ == "__main__":
+    print("Fetching debt info...")
     debt_fetcher = DebtFetcher()
-    print(debt_fetcher.get_debt()) 
+    debt, rate, asof = debt_fetcher.get_debt_info()
+    print(f"Current debt is £{debt},\nat a rate of {rate}%,\nas of {asof}.")
